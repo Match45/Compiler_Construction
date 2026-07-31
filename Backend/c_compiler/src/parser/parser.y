@@ -1,7 +1,10 @@
+%code requires {
+#include "../src/ast/ast.h"
+}
 %{
 #include <cstdio>
 #include <cstdlib>
-#include "../ast/ast.h"
+#include "../src/ast/ast.h"
 
 int yylex();
 void yyerror(const char *s);
