@@ -1,8 +1,15 @@
 %{
 #include "parser.tab.h"
-#include "../ast/ast.h"
+#include "../src/ast/ast.h"
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
+
+#ifdef _WIN32
+#define strdup _strdup
+#define fileno _fileno
+#endif
+
 extern int yylineno;
 %}
 
