@@ -1,16 +1,14 @@
 %{
-#include "parser.tab.h"
-#include "../src/ast/ast.h"
-#include <cstdlib>
-#include <cstring>
-#include <cstdio>
-
-#ifdef _WIN32
-#define strdup _strdup
-#define fileno _fileno
+#if defined(__MINGW32__) || defined(_WIN32)
+  #include <io.h>      /* for _fileno */
+  #include <string.h>
+  #ifndef _strdup
+    #define _strdup strdup
+  #endif
+  #ifndef _fileno
+    #define _fileno fileno
+  #endif
 #endif
-
-extern int yylineno;
 %}
 
 %option noyywrap
