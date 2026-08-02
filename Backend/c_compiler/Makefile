@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall
+CXXFLAGS = -std=gnu++17 -Wall
 BUILD = build
 
 all: $(BUILD)/c_compiler
