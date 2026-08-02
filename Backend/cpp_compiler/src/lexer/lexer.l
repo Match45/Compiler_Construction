@@ -2,14 +2,21 @@
 
 #include <iostream>
 #include <cstdio>
-#include "parser.tab.h"
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include "parser.tab.hpp"
 
+extern int yylineno;
 using namespace std;
 
 %}
 
 %option noyywrap
 %option yylineno
+
+DIGIT   [0-9]
+LETTER  [a-zA-Z_]
 
 %%
 
@@ -26,7 +33,6 @@ using namespace std;
 "else"          { return KEYWORD_ELSE; }
 "while"         { return KEYWORD_WHILE; }
 "for"           { return KEYWORD_FOR; }
-"do"            { return KEYWORD_DO; }
 "break"         { return KEYWORD_BREAK; }
 "continue"      { return KEYWORD_CONTINUE; }
 "cout"          { return KEYWORD_COUT; }
@@ -34,15 +40,19 @@ using namespace std;
 "endl"          { return KEYWORD_ENDL; }
 "return"        { return KEYWORD_RETURN; }
 
+{LETTER}({LETTER}|{DIGIT})*     { yylval.str = new std::string(yytext); return IDENTIFIER; }
+
+{DIGIT}+"."{DIGIT}+             { yylval.dval = atof(yytext); return NUMBER; }
+
+{DIGIT}+                        { yylval.dval = atof(yytext); return NUMBER; }
+
+\"([^\"\\]|\\.)*\"              { yylval.str = new std::string(yytext); return STRING_LITERAL; }
+
+"=="|"!="|"<="|">="|"<"|">"     { yylval.str = new std::string(yytext); return RELATIONAL; }
+
 "//".*                      { }
 
 "/*"([^*]|\*+[^*/])*\*+"/"  { }
-
-\"([^\\\"]|\\.)*\"          { return STRING_LITERAL; }
-
-[0-9]+(\.[0-9]+)?           { return NUMBER; }
-
-[a-zA-Z_][a-zA-Z0-9_]*      { return IDENTIFIER; }
 
 "<<"        { return LEFT_SHIFT; }
 ">>"        { return RIGHT_SHIFT; }
@@ -55,17 +65,8 @@ using namespace std;
 "/"         { return '/'; }
 "%"         { return '%'; }
 
-"&"         { return '&'; }
-
 "++"        { return INCREMENT; }
 "--"        { return DECREMENT; }
-
-"=="        { return RELATIONAL; }
-"!="        { return RELATIONAL; }
-"<="        { return RELATIONAL; }
-">="        { return RELATIONAL; }
-"<"         { return RELATIONAL; }
-">"         { return RELATIONAL; }
 
 "&&"        { return LOGICAL_AND; }
 "||"        { return LOGICAL_OR; }
@@ -77,9 +78,6 @@ using namespace std;
 "}"         { return RBRACE; }
 "("         { return LPAREN; }
 ")"         { return RPAREN; }
-"["         { return '['; }
-"]"         { return ']'; }
-":"         { return ':'; }
 
 [ \t\r]+    { }
 
