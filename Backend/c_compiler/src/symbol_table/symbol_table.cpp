@@ -28,8 +28,11 @@ void SymbolTable::printTable() const {
     int lvl = 0;
     for (auto& scope : scopeStack) {
         printf("--- Scope %d ---\n", lvl++);
-        for (auto& [name, sym] : scope)
+        for (auto it = scope.begin(); it != scope.end(); ++it) {
+            const std::string& name = it->first;
+            const Symbol& sym = it->second;
             printf("  %-10s type=%-6s kind=%d line=%d\n",
                    name.c_str(), sym.type.c_str(), sym.kind, sym.line);
+        }
     }
 }
