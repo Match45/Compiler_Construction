@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "../ast/ast.h"
+
 using namespace std;
 
 extern int yylex();
@@ -11,13 +13,17 @@ extern int yylineno;
 
 void yyerror(const char *s);
 
-%}
+ASTNode *root;
+
+%} 
 
 %union{
 
     int ival;
     float fval;
     char *sval;
+    ASTNode *node;
+
 
 }
 
@@ -66,6 +72,19 @@ void yyerror(const char *s);
 %token <sval> CHAR_LITERAL
 
 %token <sval> IDENTIFIER
+
+%type <node> program
+%type <node> class_declaration
+%type <node> class_body
+%type <node> class_member
+%type <node> main_method
+%type <node> compound_statement
+%type <node> statement_list
+%type <node> statement
+%type <node> variable_declaration
+%type <node> assignment_statement
+%type <node> print_statement
+%type <node> expression
 
 %left OR
 %left AND
