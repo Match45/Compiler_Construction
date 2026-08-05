@@ -1,5 +1,7 @@
 #include "ast.h"
 #include <cstdio>
+#include <vector>
+#include <string>
 
 ASTNode* makeNode(NodeType t, const std::string& label, int line, ASTNode* l, ASTNode* r) {
     ASTNode* n = new ASTNode();
@@ -84,12 +86,44 @@ ASTNode* appendSibling(ASTNode* list, ASTNode* item) {
     cur->next = item;
     return list;
 }
+
+// ---------- Tree-style AST printer ----------
+
+static void printASTHelper(ASTNode* node, std::string prefix, bool isLast) {
+    if (!node) return;
+
+    printf("%s", prefix.c_str());
+    printf("%s", isLast ? "\xE2\x94\x94\xE2\x94\x80\xE2\x94\x80 " : "\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80 ");
+    // "└── " and "├── " in UTF-8 bytes (safe for Windows console with UTF-8 codepage)
+
+    printf("%s", node->label.c_str());
+    if (!node->strval.empty()) printf(" [%s]", node->strval.c_str());
+    if (node->type == NODE_INT_LIT) printf(" = %d", node->intval);
+    if (node->type == NODE_FLOAT_LIT) printf(" = %g", node->floatval);
+    printf(" (line %d)\n", node->line);
+
+    std::string newPrefix = prefix + (isLast ? "    " : "\xE2\x94\x82   ");
+    // "    " if last, "│   " otherwise
+
+    std::vector<ASTNode*> kids;
+    if (node->left) kids.push_back(node->left);
+    if (node->right) kids.push_back(node->right);
+    for (auto c : node->children) if (c) kids.push_back(c);
+
+    for (size_t i = 0; i < kids.size(); i++) {
+        bool lastChild = (i == kids.size() - 1);
+        printASTHelper(kids[i], newPrefix, lastChild);
+    }
+}
+
 void printAST(ASTNode* node, int depth) {
-    for (ASTNode* n = node; n; n = n->next) {
-        for (int i = 0; i < depth; i++) printf("  ");
-        printf("%s (line %d)\n", n->label.c_str(), n->line);
-        if (n->left) printAST(n->left, depth + 1);
-        if (n->right) printAST(n->right, depth + 1);
-        for (auto c : n->children) if (c) printAST(c, depth + 1);
+    (void)depth; // no longer used, kept for header compatibility
+
+    std::vector<ASTNode*> siblings;
+    for (ASTNode* n = node; n; n = n->next) siblings.push_back(n);
+
+    for (size_t i = 0; i < siblings.size(); i++) {
+        bool lastSibling = (i == siblings.size() - 1);
+        printASTHelper(siblings[i], "", lastSibling);
     }
 }
