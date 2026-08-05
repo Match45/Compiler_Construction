@@ -112,12 +112,18 @@ ASTNode *root;
 
 program
     : class_declaration
-      {
-          cout << endl;
-          cout << "                 " << endl;
-          cout << " Java Parsing Successful " << endl;
-          cout << "                 " << endl;
-      }
+    {
+        $$ = new ASTNode("Program");
+
+        $$->addChild($1);
+
+        root = $$;
+
+        cout << endl;
+        cout << "           " << endl;
+        cout << "Java Parsing Successful" << endl;
+        cout << "           " << endl;
+    }
     ;
 
 class_declaration
@@ -125,16 +131,38 @@ class_declaration
       '{'
       class_body
       '}'
+    {
+        $$ = new ASTNode("Class", $3);
+
+        $$->addChild($5);
+    }
     ;
 
 class_body
     : class_body class_member
+    {
+        $$ = $1;
+
+        if($2 != nullptr)
+            $$->addChild($2);
+    }
+
     | /* empty */
+    {
+        $$ = new ASTNode("ClassBody");
+    }
     ;
 
 class_member
     : main_method
+    {
+        $$ = $1;
+    }
+
     | variable_declaration
+    {
+        $$ = $1;
+    }
     ;
 
 main_method
