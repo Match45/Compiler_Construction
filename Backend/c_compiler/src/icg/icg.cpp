@@ -111,11 +111,16 @@ std::string ICG::genExpr(ASTNode* n) {
 
 void ICG::print() const {
     for (auto& t : code) {
-        if (t.op == "label") printf("%s:\n", t.result.c_str());
+        if (t.op == "func_begin") printf("func %s:\n", t.arg1.c_str());
+        else if (t.op == "func_end") printf("end_func %s\n\n", t.arg1.c_str());
+        else if (t.op == "label") printf("%s:\n", t.result.c_str());
         else if (t.op == "goto") printf("  goto %s\n", t.result.c_str());
         else if (t.op == "ifFalse") printf("  ifFalse %s goto %s\n", t.arg1.c_str(), t.result.c_str());
         else if (t.op == "=") printf("  %s = %s\n", t.result.c_str(), t.arg1.c_str());
         else if (t.op == "return") printf("  return %s\n", t.arg1.c_str());
+        else if (t.op == "param") printf("  param %s\n", t.arg1.c_str());
+        else if (t.op == "call") printf("  %s = call %s\n", t.result.c_str(), t.arg1.c_str());
+        else if (t.op == "=[]") printf("  %s = %s[%s]\n", t.result.c_str(), t.arg1.c_str(), t.arg2.c_str());
         else if (t.arg2.empty()) printf("  %s = %s %s\n", t.result.c_str(), t.op.c_str(), t.arg1.c_str());
         else printf("  %s = %s %s %s\n", t.result.c_str(), t.arg1.c_str(), t.op.c_str(), t.arg2.c_str());
     }
