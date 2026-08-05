@@ -87,12 +87,8 @@ ASTNode *root;
 %type <node> expression
 
 %type <node> data_type
-%type <node> condition
 %type <node> assignment_expression
-%type <node> return_statement
-%type <node> if_statement
-%type <node> while_statement
-%type <node> for_statement
+
 
 %left OR   
 %left AND
@@ -272,79 +268,204 @@ return_statement
 
 variable_declaration
     : data_type IDENTIFIER ';'
+    {
+        $$ = new ASTNode("VariableDeclaration");
+
+        $$->addChild($1);
+
+        $$->addChild(new ASTNode("Identifier", $2));
+    }
+
     | data_type IDENTIFIER '=' expression ';'
+    {
+        $$ = new ASTNode("VariableDeclaration");
+
+        $$->addChild($1);
+
+        $$->addChild(new ASTNode("Identifier", $2));
+
+        $$->addChild($4);
+    }
     ;
 
 data_type
     : INT
-    | FLOAT
-    | DOUBLE
-    | CHAR
-    | BOOLEAN
-    | STRING
-    ;
+    {
+        $$ = new ASTNode("Type", "int");
+    }
 
+    | FLOAT
+    {
+        $$ = new ASTNode("Type", "float");
+    }
+
+    | DOUBLE
+    {
+        $$ = new ASTNode("Type", "double");
+    }
+
+    | CHAR
+    {
+        $$ = new ASTNode("Type", "char");
+    }
+
+    | BOOLEAN
+    {
+        $$ = new ASTNode("Type", "boolean");
+    }
+
+    | STRING
+    {
+        $$ = new ASTNode("Type", "String");
+    }
+    ;
 
 assignment_statement
     : IDENTIFIER '=' expression ';'
+    {
+        $$ = new ASTNode("Assignment");
+
+        $$->addChild(new ASTNode("Identifier", $1));
+
+        $$->addChild($3);
+    }
     ;
 
 assignment_expression
-
     : IDENTIFIER '=' expression
+    {
+        $$ = new ASTNode("Assignment");
 
+        $$->addChild(new ASTNode("Identifier", $1));
+
+        $$->addChild($3);
+    }
     ;
 
-
 print_statement
-
     : PRINTLN '(' expression ')' ';'
+    {
+        $$ = new ASTNode("Print");
+
+        $$->addChild($3);
+    }
 
     | PRINTLN '(' ')' ';'
-
+    {
+        $$ = new ASTNode("Print");
+    }
     ;
 
 
 expression
-
     : expression '+' expression
+    {
+        $$ = new ASTNode("+");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
 
     | expression '-' expression
+    {
+        $$ = new ASTNode("-");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
 
     | expression '*' expression
+    {
+        $$ = new ASTNode("*");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
 
     | expression '/' expression
+    {
+        $$ = new ASTNode("/");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
 
     | expression '%' expression
+    {
+        $$ = new ASTNode("%");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
 
     | '+' expression
+    {
+        $$ = $2;
+    }
 
     | '-' expression %prec UMINUS
+    {
+        $$ = new ASTNode("UnaryMinus");
+        $$->addChild($2);
+    }
 
     | '(' expression ')'
+    {
+        $$ = $2;
+    }
 
     | IDENTIFIER
+    {
+        $$ = new ASTNode("Identifier", $1);
+    }
 
     | INTEGER_LITERAL
+    {
+        $$ = new ASTNode("Integer", to_string($1));
+    }
 
     | FLOAT_LITERAL
+    {
+        $$ = new ASTNode("Float", to_string($1));
+    }
 
     | STRING_LITERAL
+    {
+        $$ = new ASTNode("String", $1);
+    }
 
     | CHAR_LITERAL
+    {
+        $$ = new ASTNode("Char", $1);
+    }
 
     | TRUE
-
+    {
+        $$ = new ASTNode("Boolean", "true");
+    }
     | FALSE
+    {
+        $$ = new ASTNode("Boolean", "false");
+    }
 
     | IDENTIFIER INC
+    {
+        $$ = new ASTNode("PostIncrement");
+        $$->addChild(new ASTNode("Identifier", $1));
+    }
 
     | IDENTIFIER DEC
+    {
+        $$ = new ASTNode("PostDecrement");
+        $$->addChild(new ASTNode("Identifier", $1));
+    }
 
     | INC IDENTIFIER
+    {
+        $$ = new ASTNode("PreIncrement");
+        $$->addChild(new ASTNode("Identifier", $2));
+    }
 
     | DEC IDENTIFIER
-
+    {
+        $$ = new ASTNode("PreDecrement");
+        $$->addChild(new ASTNode("Identifier", $2));
+    }
     ;
 
 
