@@ -86,7 +86,15 @@ ASTNode *root;
 %type <node> print_statement
 %type <node> expression
 
-%left OR
+%type <node> data_type
+%type <node> condition
+%type <node> assignment_expression
+%type <node> return_statement
+%type <node> if_statement
+%type <node> while_statement
+%type <node> for_statement
+
+%left OR   
 %left AND
 
 %left EQ NEQ
@@ -120,9 +128,12 @@ program
         root = $$;
 
         cout << endl;
-        cout << "           " << endl;
         cout << "Java Parsing Successful" << endl;
-        cout << "           " << endl;
+
+        cout << endl;
+        cout << ".......... AST .........." << endl;
+
+        printAST(root);
     }
     ;
 
@@ -174,39 +185,84 @@ main_method
       IDENTIFIER
       ')'
       compound_statement
+    {
+        $$ = new ASTNode("MainMethod");
+
+       $$->addChild($11);
+    }
     ;
 
 compound_statement
     : '{'
       statement_list
       '}'
+    {
+        $$ = new ASTNode("CompoundStatement");
+
+        $$->addChild($2);
+    }
     ;
 
 statement_list
     : statement_list statement
+    {
+        $$ = $1;
+
+        if($2 != nullptr)
+            $$->addChild($2);
+    }
+
     | /* empty */
+    {
+        $$ = new ASTNode("StatementList");
+    }
     ;
 
 statement
-
     : variable_declaration
+    {
+        $$ = $1;
+    }
 
     | assignment_statement
+    {
+        $$ = $1;
+    }
 
     | print_statement
-
-    | if_statement
-
-    | while_statement
-
-    | for_statement
-
-    | return_statement
+    {
+        $$ = $1;
+    }
 
     | compound_statement
+    {
+        $$ = $1;
+    }
+
+    | if_statement
+    {
+        $$ = nullptr;
+    }
+
+    | while_statement
+    {
+        $$ = nullptr;
+    }
+
+    | for_statement
+    {
+        $$ = nullptr;
+    }
+
+    | return_statement
+    {
+        $$ = nullptr;
+    }
 
     | ';'
-
+    {
+        $$ = nullptr;
+    }
     ;
 
 return_statement
