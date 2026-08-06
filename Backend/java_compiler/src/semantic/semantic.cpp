@@ -27,6 +27,26 @@ void processVariableDeclaration(ASTNode *node)
     }
 }
 
+void processAssignment(ASTNode *node)
+{
+    if(node->children.size() < 2)
+        return;
+
+    string name = node->children[0]->value;
+
+    cout << "Assignment Found : "
+         << name
+         << endl;
+
+    if(!symbolTable.exists(name))
+    {
+        cout << "Semantic Error : Variable "
+             << name
+             << " not declared."
+             << endl;
+    }
+}
+
 void traverseAST(ASTNode *node)
 {
     if(node == nullptr)
@@ -41,7 +61,12 @@ void traverseAST(ASTNode *node)
 
     if(node->type == "VariableDeclaration")
     {
-    processVariableDeclaration(node);
+        processVariableDeclaration(node);
+    }
+
+    if(node->type == "Assignment")
+    {
+        processAssignment(node);
     }
 
     for(ASTNode *child : node->children)
