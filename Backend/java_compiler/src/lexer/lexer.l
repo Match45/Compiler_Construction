@@ -1,5 +1,4 @@
 %{
-
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
@@ -9,7 +8,6 @@ using namespace std;
 #include "../parser/parser.tab.h"
 
 extern int yylineno;
-
 %}
 
 %option noyywrap
@@ -18,127 +16,116 @@ extern int yylineno;
 LETTER      [a-zA-Z_]
 DIGIT       [0-9]
 
-ID          {LETTER}({LETTER}|{DIGIT})*
-INTEGER     {DIGIT}+
-FLOAT       {DIGIT}+"."{DIGIT}+
+ID              {LETTER}({LETTER}|{DIGIT})*
+INTEGERNUM      {DIGIT}+
+FLOATNUM        {DIGIT}+"."{DIGIT}+
 
-STRING      \"([^\\\"]|\\.)*\"
-CHARCONST   \'([^\\\']|\\.)\'
+STRING_PATTERN  \"([^\\\"]|\\.)*\"
+CHAR_PATTERN    \'([^\\\']|\\.)\'
 
 %%
 
-"public"               return PUBLIC;
-"private"              return PRIVATE;
-"protected"            return PROTECTED;
+"public"                  { return PUBLIC; }
+"private"                 { return PRIVATE; }
+"protected"               { return PROTECTED; }
 
-"class"                return CLASS;
+"class"                   { return CLASS; }
 
-"static"               return STATIC;
+"static"                  { return STATIC; }
 
-"void"                 return VOID;
+"void"                    { return VOID; }
 
-"main"                 return MAIN;
+"main"                    { return MAIN; }
 
-"int"                  return INT;
-"float"                return FLOAT;
-"double"               return DOUBLE;
-"char"                 return CHAR;
-"boolean"              return BOOLEAN;
-"String"               return STRING;
+"int"                     { return INT; }
+"float"                   { return FLOAT; }
+"double"                  { return DOUBLE; }
+"char"                    { return CHAR; }
+"boolean"                 { return BOOLEAN; }
+"String"                  { return STRING; }
 
-"if"                   return IF;
-"else"                 return ELSE;
+"if"                      { return IF; }
+"else"                    { return ELSE; }
 
-"for"                  return FOR;
-"while"                return WHILE;
-"do"                   return DO;
+"for"                     { return FOR; }
+"while"                   { return WHILE; }
+"do"                      { return DO; }
 
-"return"               return RETURN;
+"return"                  { return RETURN; }
 
-"true"                 return TRUE;
-"false"                return FALSE;
+"true"                    { return TRUE; }
+"false"                   { return FALSE; }
 
-"System.out.println"   return PRINTLN;
+"System.out.println"      { return PRINTLN; }
 
-"=="                   return EQ;
-"!="                   return NEQ;
-"<="                   return LE;
-">="                   return GE;
+"=="                      { return EQ; }
+"!="                      { return NEQ; }
+"<="                      { return LE; }
+">="                      { return GE; }
 
-"&&"                   return AND;
-"||"                   return OR;
+"&&"                      { return AND; }
+"||"                      { return OR; }
 
-"++"                   return INC;
-"--"                   return DEC;
+"++"                      { return INC; }
+"--"                      { return DEC; }
 
-"+"                    return '+';
-"-"                    return '-';
-"*"                    return '*';
-"/"                    return '/';
-"%"                    return '%';
+"+"                       { return '+'; }
+"-"                       { return '-'; }
+"*"                       { return '*'; }
+"/"                       { return '/'; }
+"%"                       { return '%'; }
 
-"="                    return '=';
+"="                       { return '='; }
 
-"<"                    return '<';
-">"                    return '>';
+"<"                       { return '<'; }
+">"                       { return '>'; }
 
-"!"                    return '!';
+"!"                       { return '!'; }
 
+";"                       { return ';'; }
+","                       { return ','; }
 
-";"                    return ';';
-","                    return ',';
+"("                       { return '('; }
+")"                       { return ')'; }
 
-"("                    return '(';
-")"                    return ')';
+"{"                       { return '{'; }
+"}"                       { return '}'; }
 
-"{"                    return '{';
-"}"                    return '}';
+"["                       { return '['; }
+"]"                       { return ']'; }
 
-"["                    return '[';
-"]"                    return ']';
-
-{FLOAT}
-{
+{FLOATNUM} {
     yylval.fval = atof(yytext);
     return FLOAT_LITERAL;
 }
 
-{INTEGER}
-{
+{INTEGERNUM} {
     yylval.ival = atoi(yytext);
     return INTEGER_LITERAL;
 }
 
-{STRING}
-{
+{STRING_PATTERN} {
     yylval.sval = strdup(yytext);
     return STRING_LITERAL;
 }
 
-{CHARCONST}
-{
+{CHAR_PATTERN} {
     yylval.sval = strdup(yytext);
     return CHAR_LITERAL;
 }
 
-{ID}
-{
+{ID} {
     yylval.sval = strdup(yytext);
     return IDENTIFIER;
 }
 
-"//".*                  { }
+"//".*      { }
 
-"/*"([^*]|\*+[^*/])*\*+"/"     { }
+[ \t\r]+    { }
 
+\n          { }
 
-[ \t\r]+                { }
-
-\n                      { }
-
-
-.
-{
+. {
     cout << "Lexical Error at line "
          << yylineno
          << " : "
