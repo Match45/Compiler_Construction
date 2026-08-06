@@ -1,13 +1,15 @@
-%code requires {
-    #include <string>
-    #include <vector>
-    #include "ast.h"
-}
-
 %{
+
 #include <iostream>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
 #include "ast.h"
+#include "../Semantic/semantic.h"
+#include "../IntermediateCode/icg.h"
+#include "../Optimizer/optimizer.h"
+#include "../TargetCode/virtual_machine.h"
 
 using namespace std;
 
@@ -17,34 +19,36 @@ void yyerror(const char *s);
 extern int yylineno;
 extern FILE *yyin;
 
-ASTNode *g_ast_root = nullptr;  
-
-static void report(const char *msg) { cout << msg << " parsed.\n"; }
+ProgramNode* rootAST = nullptr;
+bool hasSyntaxError = false;
 
 %}
 
 %union {
-    ASTNode                  *node;
-    std::vector<ASTNode*>    *list;
-    std::vector<std::string> *strlist;
-    std::string              *str;
-    double                   dval;
+    char* str_val;
+    ASTNode* node_val;
+    std::vector<ASTNode*>* vec_val;
+    std::vector<Parameter>* param_vec_val;
+    Parameter* param_val;
+    CoutItem* cout_item_val;
+    std::vector<CoutItem>* cout_vec_val;
+    std::vector<std::string>* str_vec_val;
 }
 
 /* Keywords */
 %token KEYWORD_NAMESPACE KEYWORD_USING
-%token KEYWORD_INT KEYWORD_FLOAT KEYWORD_DOUBLE KEYWORD_CHAR KEYWORD_VOID
+%token <str_val> KEYWORD_INT KEYWORD_FLOAT KEYWORD_DOUBLE KEYWORD_CHAR KEYWORD_VOID
 %token KEYWORD_IF KEYWORD_ELSE
-%token KEYWORD_WHILE KEYWORD_FOR 
+%token KEYWORD_WHILE KEYWORD_FOR KEYWORD_DO
 %token KEYWORD_BREAK KEYWORD_CONTINUE KEYWORD_RETURN
 %token KEYWORD_COUT KEYWORD_CIN KEYWORD_ENDL
 
 /* Literals / identifiers */
-%token <str> IDENTIFIER STRING_LITERAL
-%token <dval> NUMBER
+%token <str_val> IDENTIFIER STRING_LITERAL NUMBER
 
 /* Operators */
-%token ASSIGNMENT RELATIONAL
+%token ASSIGNMENT 
+%token <str_val> RELATIONAL
 %token LOGICAL_AND LOGICAL_OR LOGICAL_NOT
 %token LEFT_SHIFT RIGHT_SHIFT
 %token INCREMENT DECREMENT
@@ -55,24 +59,26 @@ static void report(const char *msg) { cout << msg << " parsed.\n"; }
 %token LPAREN RPAREN
 
 /* Nonterminal types */
-%type <node> program global_item namespace_stmt function_def parameter
-%type <node> compound_stmt statement declaration assignment_stmt
-%type <node> if_stmt while_stmt for_stmt for_init for_update
-%type <node> return_stmt break_stmt continue_stmt cout_stmt cin_stmt
-%type <node> function_call_stmt expression cout_item
-%type <str>  type_spec
-%type <list> parameter_list parameters statement_list cout_chain argument_list
-%type <strlist> cin_chain
+%type <node_val> program global_item namespace_stmt function_def compound_stmt statement
+%type <node_val> declaration assignment_stmt if_stmt while_stmt for_stmt do_while_stmt
+%type <node_val> return_stmt break_stmt continue_stmt cout_stmt cin_stmt function_call_stmt expression
+%type <str_val> type_spec declaration_no_semicolon
+%type <vec_val> statement_list argument_list
+%type <param_vec_val> parameter_list parameters
+%type <param_val> parameter
+%type <cout_vec_val> cout_chain
+%type <str_vec_val> cin_chain
 
 /* Precedence (lowest to highest) */
-%right ASSIGNMENT
-%left  LOGICAL_OR
-%left  LOGICAL_AND
+%left LOGICAL_OR
+%left LOGICAL_AND
+%left RELATIONAL
+%left '+' '-'
+%left '*' '/' '%'
 %right LOGICAL_NOT
-%left  RELATIONAL
-%left  '+' '-'
-%left  '*' '/' '%'
 %right UMINUS
+%right ASSIGNMENT
+%right INCREMENT DECREMENT
 
 %%
 
@@ -81,247 +87,454 @@ static void report(const char *msg) { cout << msg << " parsed.\n"; }
 program
     : /* empty */
       {
-          $$ = new ProgramNode();
-          g_ast_root = $$;
+          rootAST = new ProgramNode(yylineno);
+          $$ = rootAST;
       }
-
     | program global_item
       {
-          if ($2) $1->children.push_back($2); 
-          $$ = $1; g_ast_root = $1; 
+          if ($2 != nullptr) {
+              rootAST->statements.push_back($2);
+          }
+          $$ = rootAST;
       }
     ;
 
 global_item
-    : namespace_stmt  { $$ = nullptr; }
-    | function_def    { $$ = $1; }
+    : namespace_stmt      { $$ = nullptr; }
+    | function_def        { $$ = $1; }
+    | declaration         { $$ = $1; }
     ;
 
 namespace_stmt
     : KEYWORD_USING KEYWORD_NAMESPACE IDENTIFIER SEMICOLON
-      { 
-        cout << "Using namespace parsed.\n";
-        delete $3;
-        $$ = nullptr; 
+      {
+          $$ = nullptr;
       }
     ;
 
-/* ---------- Types ---------- */
-
 type_spec
-    : KEYWORD_INT      { $$ = new string("int"); }
-    | KEYWORD_FLOAT    { $$ = new string("float"); }
-    | KEYWORD_DOUBLE   { $$ = new string("double"); }
-    | KEYWORD_CHAR     { $$ = new string("char"); }
-    | KEYWORD_VOID     { $$ = new string("void"); }
+    : KEYWORD_INT    { $$ = $1; }
+    | KEYWORD_FLOAT  { $$ = $1; }
+    | KEYWORD_DOUBLE { $$ = $1; }
+    | KEYWORD_CHAR   { $$ = $1; }
+    | KEYWORD_VOID   { $$ = $1; }
     ;
-
-/* ---------- Functions ---------- */
 
 function_def
     : type_spec IDENTIFIER LPAREN parameter_list RPAREN compound_stmt
       {
-          $$ = makeFuncDef(*$1, *$2, $4, $6, yylineno);
-          delete $1; delete $2;
-          cout << "Function definition parsed.\n";
+          std::vector<Parameter> params;
+          if ($4 != nullptr) {
+              params = *$4;
+              delete $4;
+          }
+          $$ = new FunctionDefNode($1, $2, params, $6, yylineno);
       }
     ;
 
 parameter_list
-    : /* empty */    { $$ = new vector<ASTNode*>(); }
-    | parameters     { $$ = $1; }
+    : /* empty */
+      {
+          $$ = new std::vector<Parameter>();
+      }
+    | parameters
+      {
+          $$ = $1;
+      }
     ;
 
 parameters
-    : parameter                   { $$ = new std::vector<ASTNode*>(); $$->push_back($1); }
-    | parameters COMMA parameter  { $1->push_back($3); $$ = $1; }
+    : parameter
+      {
+          $$ = new std::vector<Parameter>();
+          $$->push_back(*$1);
+          delete $1;
+      }
+    | parameters COMMA parameter
+      {
+          $1->push_back(*$3);
+          delete $3;
+          $$ = $1;
+      }
     ;
 
 parameter
     : type_spec IDENTIFIER
       {
-          $$ = new ParamNode(*$1, *$2);
-          delete $1; delete $2;
+          $$ = new Parameter{$1, $2};
       }
     ;
 
-/* ---------- Statements ---------- */
-
 compound_stmt
-    : LBRACE statement_list RBRACE  { $$ = makeCompound($2); }
-
+    : LBRACE statement_list RBRACE
+      {
+          BlockNode* block = new BlockNode(yylineno);
+          if ($2 != nullptr) {
+              block->statements = *$2;
+              delete $2;
+          }
+          $$ = block;
+      }
     ;
 
 statement_list
-    : /* empty */                 { $$ = new std::vector<ASTNode*>(); }
-    | statement_list statement    { $1->push_back($2); $$ = $1; }
+    : /* empty */
+      {
+          $$ = new std::vector<ASTNode*>();
+      }
+    | statement_list statement
+      {
+          if ($2 != nullptr) {
+              $1->push_back($2);
+          }
+          $$ = $1;
+      }
     ;
 
 statement
-    : declaration          { $$ = $1; }
-    | assignment_stmt      { $$ = $1; }
-    | if_stmt              { $$ = $1; }
-    | while_stmt           { $$ = $1; }
-    | for_stmt             { $$ = $1; }
-    | return_stmt          { $$ = $1; }
-    | break_stmt           { $$ = $1; }
-    | continue_stmt        { $$ = $1; }
-    | cin_stmt             { $$ = $1; }
-    | cout_stmt            { $$ = $1; }
-    | function_call_stmt   { $$ = $1; }
-    | compound_stmt        { $$ = $1; }
+    : declaration           { $$ = $1; }
+    | assignment_stmt       { $$ = $1; }
+    | if_stmt               { $$ = $1; }
+    | while_stmt            { $$ = $1; }
+    | for_stmt              { $$ = $1; }
+    | do_while_stmt         { $$ = $1; }
+    | return_stmt           { $$ = $1; }
+    | break_stmt            { $$ = $1; }
+    | continue_stmt         { $$ = $1; }
+    | cout_stmt             { $$ = $1; }
+    | cin_stmt              { $$ = $1; }
+    | function_call_stmt    { $$ = $1; }
+    | compound_stmt         { $$ = $1; }
     ;
 
 declaration
-    : type_spec IDENTIFIER SEMICOLON                       { $$ = makeVarDecl(*$1, *$2, nullptr, yylineno); delete $1; delete $2; report("Variable declaration"); }
-    | type_spec IDENTIFIER ASSIGNMENT expression SEMICOLON { $$ = makeVarDecl(*$1, *$2, $4, yylineno); delete $1; delete $2; report("Variable initialization"); }
+    : type_spec IDENTIFIER SEMICOLON
+      {
+          $$ = new VarDeclNode($1, $2, nullptr, yylineno);
+      }
+    | type_spec IDENTIFIER ASSIGNMENT expression SEMICOLON
+      {
+          $$ = new VarDeclNode($1, $2, $4, yylineno);
+      }
     ;
 
 assignment_stmt
-    : IDENTIFIER ASSIGNMENT expression SEMICOLON   { $$ = makeAssign(*$1, $3, yylineno); delete $1; report("Assignment"); }
-    | IDENTIFIER INCREMENT SEMICOLON               { $$ = makeIncDec(*$1, true, yylineno); delete $1; report("Increment"); }
-    | IDENTIFIER DECREMENT SEMICOLON               { $$ = makeIncDec(*$1, false, yylineno); delete $1; report("Decrement"); }
+    : IDENTIFIER ASSIGNMENT expression SEMICOLON
+      {
+          $$ = new AssignNode($1, $3, yylineno);
+      }
+    | IDENTIFIER INCREMENT SEMICOLON
+      {
+          ASTNode* idNode = new IdentifierNode($1, yylineno);
+          ASTNode* oneNode = new LiteralNode("int", "1", yylineno);
+          ASTNode* addNode = new BinaryExprNode("+", idNode, oneNode, yylineno);
+          $$ = new AssignNode($1, addNode, yylineno);
+      }
+    | IDENTIFIER DECREMENT SEMICOLON
+      {
+          ASTNode* idNode = new IdentifierNode($1, yylineno);
+          ASTNode* oneNode = new LiteralNode("int", "1", yylineno);
+          ASTNode* subNode = new BinaryExprNode("-", idNode, oneNode, yylineno);
+          $$ = new AssignNode($1, subNode, yylineno);
+      }
     ;
-
-/* ---------- Conditional ---------- */
 
 if_stmt
-    : KEYWORD_IF LPAREN expression RPAREN compound_stmt                            
-        { $$ = makeIf($3, $5, nullptr, yylineno); cout << "If statement parsed.\n"; }
-    | KEYWORD_IF LPAREN expression RPAREN compound_stmt KEYWORD_ELSE compound_stmt
-        { $$ = makeIf($3, $5, $7, yylineno); cout << "If-Else statement parsed.\n"; }
-    | KEYWORD_IF LPAREN expression RPAREN compound_stmt KEYWORD_ELSE if_stmt
-        { $$ = makeIf($3, $5, $7, yylineno); cout << "If-Else-If statement parsed.\n"; }
+    : KEYWORD_IF LPAREN expression RPAREN statement
+      {
+          $$ = new IfStmtNode($3, $5, nullptr, yylineno);
+      }
+    | KEYWORD_IF LPAREN expression RPAREN statement KEYWORD_ELSE statement
+      {
+          $$ = new IfStmtNode($3, $5, $7, yylineno);
+      }
     ;
 
-/* ---------- Loops ---------- */
-
 while_stmt
-    : KEYWORD_WHILE LPAREN expression RPAREN compound_stmt
-        { $$ = makeWhile($3, $5, yylineno); report("While loop"); }
+    : KEYWORD_WHILE LPAREN expression RPAREN statement
+      {
+          $$ = new WhileStmtNode($3, $5, yylineno);
+      }
     ;
 
 for_stmt
-    : KEYWORD_FOR LPAREN for_init SEMICOLON expression SEMICOLON for_update RPAREN compound_stmt
-        { $$ = makeFor($3, $5, $7, $9, yylineno); report("For loop"); }
+    : KEYWORD_FOR LPAREN declaration_no_semicolon SEMICOLON expression SEMICOLON IDENTIFIER INCREMENT RPAREN statement
+      {
+          ASTNode* init = new VarDeclNode("int", $3, nullptr, yylineno);
+          ASTNode* idNode = new IdentifierNode($7, yylineno);
+          ASTNode* oneNode = new LiteralNode("int", "1", yylineno);
+          ASTNode* addNode = new BinaryExprNode("+", idNode, oneNode, yylineno);
+          ASTNode* update = new AssignNode($7, addNode, yylineno);
+
+          $$ = new ForStmtNode(init, $5, update, $10, yylineno);
+      }
+    | KEYWORD_FOR LPAREN IDENTIFIER ASSIGNMENT expression SEMICOLON expression SEMICOLON IDENTIFIER INCREMENT RPAREN statement
+      {
+          ASTNode* init = new AssignNode($3, $5, yylineno);
+          ASTNode* idNode = new IdentifierNode($9, yylineno);
+          ASTNode* oneNode = new LiteralNode("int", "1", yylineno);
+          ASTNode* addNode = new BinaryExprNode("+", idNode, oneNode, yylineno);
+          ASTNode* update = new AssignNode($9, addNode, yylineno);
+
+          $$ = new ForStmtNode(init, $7, update, $12, yylineno);
+      }
     ;
 
-for_init
-    : /* empty */                                  { $$ = nullptr; }
-    | type_spec IDENTIFIER ASSIGNMENT expression   { $$ = makeVarDecl(*$1, *$2, $4, yylineno); delete $1; delete $2; }
-    | IDENTIFIER ASSIGNMENT expression             { $$ = makeAssign(*$1, $3, yylineno); delete $1; }
+declaration_no_semicolon
+    : type_spec IDENTIFIER
+      {
+          $$ = $2;
+      }
+    | type_spec IDENTIFIER ASSIGNMENT expression
+      {
+          $$ = $2;
+      }
     ;
 
-for_update
-    : /* empty */                      { $$ = nullptr; }
-    | IDENTIFIER ASSIGNMENT expression { $$ = makeAssign(*$1, $3, yylineno); delete $1; }
-    | IDENTIFIER INCREMENT             { $$ = makeIncDec(*$1, true, yylineno); delete $1; }
-    | IDENTIFIER DECREMENT             { $$ = makeIncDec(*$1, false, yylineno); delete $1; }
+do_while_stmt
+    : KEYWORD_DO compound_stmt KEYWORD_WHILE LPAREN expression RPAREN SEMICOLON
+      {
+          $$ = new WhileStmtNode($5, $2, yylineno);
+      }
     ;
-
-/* ---------- Jump statements ---------- */
 
 return_stmt
     : KEYWORD_RETURN expression SEMICOLON
-        { $$ = makeReturn($2, yylineno); report("Return statement"); }
-    | KEYWORD_RETURN SEMICOLON             
-        { $$ = makeReturn(nullptr, yylineno); report("Void return"); }
+      {
+          $$ = new ReturnNode($2, yylineno);
+      }
+    | KEYWORD_RETURN SEMICOLON
+      {
+          $$ = new ReturnNode(nullptr, yylineno);
+      }
     ;
 
-
 break_stmt
-    : KEYWORD_BREAK SEMICOLON    { $$ = makeBreak(yylineno); report("Break"); }
+    : KEYWORD_BREAK SEMICOLON { $$ = nullptr; }
     ;
 
 continue_stmt
-    : KEYWORD_CONTINUE SEMICOLON { $$ = makeContinue(yylineno); report("Continue"); }
-    ;
-
-/* ---------- I/O ---------- */
-cin_stmt
-    : KEYWORD_CIN cin_chain SEMICOLON
-        { $$ = makeCin($2, yylineno); report("Cin statement"); }
-    ;
-cin_chain
-    : RIGHT_SHIFT IDENTIFIER            { $$ = new vector<string>(); $$->push_back(*$2); delete $2; }
-    | cin_chain RIGHT_SHIFT IDENTIFIER  { $1->push_back(*$3); delete $3; $$ = $1; }
+    : KEYWORD_CONTINUE SEMICOLON { $$ = nullptr; }
     ;
 
 cout_stmt
     : KEYWORD_COUT cout_chain SEMICOLON
-        { $$ = makeCout($2, yylineno); report("Cout statement"); }
+      {
+          CoutNode* node = new CoutNode(yylineno);
+          if ($2 != nullptr) {
+              node->items = *$2;
+              delete $2;
+          }
+          $$ = node;
+      }
     ;
 
 cout_chain
-    : LEFT_SHIFT cout_item              { $$ = new vector<ASTNode*>(); $$->push_back($2); }
-    | cout_chain LEFT_SHIFT cout_item   { $1->push_back($3); $$ = $1; }
+    : LEFT_SHIFT expression
+      {
+          $$ = new std::vector<CoutItem>();
+          $$->push_back(CoutItem{$2, false});
+      }
+    | LEFT_SHIFT KEYWORD_ENDL
+      {
+          $$ = new std::vector<CoutItem>();
+          $$->push_back(CoutItem{nullptr, true});
+      }
+    | cout_chain LEFT_SHIFT expression
+      {
+          $1->push_back(CoutItem{$3, false});
+          $$ = $1;
+      }
+    | cout_chain LEFT_SHIFT KEYWORD_ENDL
+      {
+          $1->push_back(CoutItem{nullptr, true});
+          $$ = $1;
+      }
     ;
 
-cout_item 
-    : expression   { $$ = $1; } 
-    | KEYWORD_ENDL { $$ = makeEndl(); }
+cin_stmt
+    : KEYWORD_CIN cin_chain SEMICOLON
+      {
+          CinNode* node = new CinNode(yylineno);
+          if ($2 != nullptr) {
+              node->varNames = *$2;
+              delete $2;
+          }
+          $$ = node;
+      }
     ;
 
-/* ---------- Function calls as statements ---------- */
+cin_chain
+    : RIGHT_SHIFT IDENTIFIER
+      {
+          $$ = new std::vector<std::string>();
+          $$->push_back($2);
+      }
+    | cin_chain RIGHT_SHIFT IDENTIFIER
+      {
+          $1->push_back($3);
+          $$ = $1;
+      }
+    ;
 
 function_call_stmt
-    : IDENTIFIER LPAREN argument_list RPAREN SEMICOLON { $$ = makeCall(*$1, $3, yylineno); delete $1; report("Function call"); }
-    | IDENTIFIER LPAREN RPAREN SEMICOLON               { $$ = makeCall(*$1, nullptr, yylineno); delete $1; report("Function call (no arguments)"); }
+    : IDENTIFIER LPAREN argument_list RPAREN SEMICOLON
+      {
+          std::vector<ASTNode*> args;
+          if ($3 != nullptr) {
+              args = *$3;
+              delete $3;
+          }
+          $$ = new FuncCallNode($1, args, yylineno);
+      }
+    | IDENTIFIER LPAREN RPAREN SEMICOLON
+      {
+          $$ = new FuncCallNode($1, std::vector<ASTNode*>(), yylineno);
+      }
     ;
 
 argument_list
-    : expression                     { $$ = new vector<ASTNode*>(); $$->push_back($1); }
-    | argument_list COMMA expression { $1->push_back($3); $$ = $1; }
+    : expression
+      {
+          $$ = new std::vector<ASTNode*>();
+          $$->push_back($1);
+      }
+    | argument_list COMMA expression
+      {
+          $1->push_back($3);
+          $$ = $1;
+      }
     ;
 
 expression
-    : expression '+' expression              { $$ = makeBinOp("+", $1, $3, yylineno); }
-    | expression '-' expression              { $$ = makeBinOp("-", $1, $3, yylineno); }
-    | expression '*' expression              { $$ = makeBinOp("*", $1, $3, yylineno); }
-    | expression '/' expression              { $$ = makeBinOp("/", $1, $3, yylineno); }
-    | expression '%' expression              { $$ = makeBinOp("%", $1, $3, yylineno); }
-    | expression RELATIONAL expression       { $$ = makeBinOp(*$2, $1, $3, yylineno); delete $2; }
-    | expression LOGICAL_AND expression      { $$ = makeBinOp("&&", $1, $3, yylineno); }
-    | expression LOGICAL_OR expression       { $$ = makeBinOp("||", $1, $3, yylineno); }
-    | LOGICAL_NOT expression                 { $$ = makeUnaryOp("!", $2, yylineno); }
-    | '-' expression %prec UMINUS            { $$ = makeUnaryOp("-", $2, yylineno); }
-    | LPAREN expression RPAREN               { $$ = $2; }
-    | IDENTIFIER LPAREN argument_list RPAREN { $$ = makeCall(*$1, $3, yylineno); delete $1; }
-    | IDENTIFIER LPAREN RPAREN               { $$ = makeCall(*$1, nullptr, yylineno); delete $1; }
-    | IDENTIFIER                             { $$ = makeIdNode(*$1, yylineno); delete $1; }
-    | NUMBER                                 { $$ = makeNumberNode($1, yylineno); }
-    | STRING_LITERAL                         { $$ = makeStringNode(*$1, yylineno); delete $1; }
+    : expression '+' expression
+      {
+          $$ = new BinaryExprNode("+", $1, $3, yylineno);
+      }
+    | expression '-' expression
+      {
+          $$ = new BinaryExprNode("-", $1, $3, yylineno);
+      }
+    | expression '*' expression
+      {
+          $$ = new BinaryExprNode("*", $1, $3, yylineno);
+      }
+    | expression '/' expression
+      {
+          $$ = new BinaryExprNode("/", $1, $3, yylineno);
+      }
+    | expression '%' expression
+      {
+          $$ = new BinaryExprNode("%", $1, $3, yylineno);
+      }
+    | expression RELATIONAL expression
+      {
+          $$ = new BinaryExprNode($2, $1, $3, yylineno);
+      }
+    | expression LOGICAL_AND expression
+      {
+          $$ = new BinaryExprNode("&&", $1, $3, yylineno);
+      }
+    | expression LOGICAL_OR expression
+      {
+          $$ = new BinaryExprNode("||", $1, $3, yylineno);
+      }
+    | LOGICAL_NOT expression
+      {
+          $$ = new UnaryExprNode("!", $2, yylineno);
+      }
+    | '-' expression %prec UMINUS
+      {
+          $$ = new UnaryExprNode("-", $2, yylineno);
+      }
+    | LPAREN expression RPAREN
+      {
+          $$ = $2;
+      }
+    | IDENTIFIER
+      {
+          $$ = new IdentifierNode($1, yylineno);
+      }
+    | NUMBER
+      {
+          $$ = new LiteralNode("int", $1, yylineno);
+      }
+    | STRING_LITERAL
+      {
+          $$ = new LiteralNode("string", $1, yylineno);
+      }
+    | IDENTIFIER LPAREN argument_list RPAREN
+      {
+          std::vector<ASTNode*> args;
+          if ($3 != nullptr) {
+              args = *$3;
+              delete $3;
+          }
+          $$ = new FuncCallNode($1, args, yylineno);
+      }
+    | IDENTIFIER LPAREN RPAREN
+      {
+          $$ = new FuncCallNode($1, std::vector<ASTNode*>(), yylineno);
+      }
     ;
 
 %%
 
-void yyerror(const char *s) { cout << "Syntax Error on line " << yylineno << ": " << s << endl; }
+void yyerror(const char *s)
+{
+    cerr << "Syntax Error on Line " << yylineno << ": " << s << endl;
+    hasSyntaxError = true;
+}
 
 int main(int argc, char *argv[])
 {
-    if (argc > 1) 
+    if (argc > 1)
     {
         yyin = fopen(argv[1], "r");
-        if (yyin == NULL) 
-        {   
-            cerr << "Cannot open input file." << endl; return 1; 
+        if (yyin == NULL)
+        {
+            cerr << "Cannot open input file: " << argv[1] << endl;
+            return 1;
         }
-    } 
-    else {
-        cout << "Enter C++ program (Ctrl+D to finish):" << endl;
     }
 
-    if (yyparse() == 0) 
-    { 
-        cout << "Parsing completed successfully.\n"; printAST(g_ast_root); 
-    }
-    else { 
-        cout << "Parsing failed.\n";
+    if (yyparse() != 0 || hasSyntaxError || rootAST == nullptr)
+    {
+        cerr << "Compilation failed during Lexical/Syntax Analysis." << endl;
+        if (yyin != stdin && yyin != NULL) fclose(yyin);
+        return 1;
     }
 
-    if (yyin != stdin && yyin != NULL) 
-    fclose(yyin);
+    SemanticAnalyzer semantic;
+    if (!semantic.analyze(rootAST))
+    {
+        for (const auto& err : semantic.getErrors())
+        {
+            cerr << err << endl;
+        }
+        cerr << "Compilation failed during Semantic Analysis." << endl;
+        delete rootAST;
+        if (yyin != stdin && yyin != NULL) fclose(yyin);
+        return 1;
+    }
+
+    IntermediateCodeGenerator icg;
+    auto rawTAC = icg.generate(rootAST);
+
+    CodeOptimizer optimizer;
+    auto optTAC = optimizer.optimize(rawTAC);
+
+    VirtualMachine vm;
+    if (!vm.execute(optTAC))
+    {
+        cerr << "Program execution terminated with runtime error." << endl;
+        delete rootAST;
+        if (yyin != stdin && yyin != NULL) fclose(yyin);
+        return 1;
+    }
+
+    delete rootAST;
+    if (yyin != stdin && yyin != NULL) fclose(yyin);
     
     return 0;
 }
-
