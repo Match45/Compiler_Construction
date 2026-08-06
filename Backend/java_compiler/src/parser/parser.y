@@ -1,3 +1,7 @@
+%code requires {
+    #include "../ast/ast.h"
+}
+
 %{
 
 #include <iostream>
@@ -87,7 +91,12 @@ ASTNode *root;
 %type <node> expression
 
 %type <node> data_type
+%type <node> condition
 %type <node> assignment_expression
+%type <node> return_statement
+%type <node> if_statement
+%type <node> while_statement
+%type <node> for_statement
 
 
 %left OR   
@@ -237,22 +246,22 @@ statement
 
     | if_statement
     {
-        $$ = nullptr;
+        $$ = $1;
     }
 
     | while_statement
     {
-        $$ = nullptr;
+         $$ = $1;
     }
 
     | for_statement
     {
-        $$ = nullptr;
+         $$ = $1;
     }
 
     | return_statement
     {
-        $$ = nullptr;
+        $$ = $1;
     }
 
     | ';'
@@ -263,7 +272,16 @@ statement
 
 return_statement
     : RETURN expression ';'
+    {
+        $$ = new ASTNode("Return");
+
+        $$->addChild($2);
+    }
+
     | RETURN ';'
+    {
+        $$ = new ASTNode("Return");
+    }
     ;
 
 variable_declaration
@@ -471,52 +489,130 @@ expression
 
 condition
     : expression '<' expression
-    | expression '>' expression
-    | expression LE expression
-    | expression GE expression
-    | expression EQ expression
-    | expression NEQ expression
-    | condition AND condition
-    | condition OR condition
-    | '!' condition
-    | '(' condition ')'
-    ;
+    {
+        $$ = new ASTNode("<");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
 
+    | expression '>' expression
+    {
+        $$ = new ASTNode(">");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
+
+    | expression LE expression
+    {
+        $$ = new ASTNode("<=");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
+
+    | expression GE expression
+    {
+        $$ = new ASTNode(">=");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
+
+    | expression EQ expression
+    {
+        $$ = new ASTNode("==");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
+
+    | expression NEQ expression
+    {
+        $$ = new ASTNode("!=");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
+
+    | condition AND condition
+    {
+        $$ = new ASTNode("&&");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
+
+    | condition OR condition
+    {
+        $$ = new ASTNode("||");
+        $$->addChild($1);
+        $$->addChild($3);
+    }
+
+    | '!' condition
+    {
+        $$ = new ASTNode("!");
+        $$->addChild($2);
+    }
+
+    | '(' condition ')'
+    {
+        $$ = $2;
+    }
+    ;
 
 if_statement
     : IF '(' condition ')' statement
       %prec LOWER_THAN_ELSE
+    {
+        $$ = new ASTNode("If");
+
+        $$->addChild($3);
+
+        $$->addChild($5);
+    }
+
     | IF '(' condition ')' statement ELSE statement
+    {
+        $$ = new ASTNode("IfElse");
+
+        $$->addChild($3);
+
+        $$->addChild($5);
+
+        $$->addChild($7);
+    }
     ;
 
 
 while_statement
     : WHILE '(' condition ')' statement
+    {
+        $$ = new ASTNode("While");
+
+        $$->addChild($3);
+
+        $$->addChild($5);
+    }
     ;
 
 
 for_statement
-
-    :
-
-      FOR
-
+    : FOR
       '('
-
       assignment_expression
-
       ';'
-
       condition
-
       ';'
-
       assignment_expression
-
       ')'
-
       statement
+    {
+        $$ = new ASTNode("For");
 
+        $$->addChild($3);   // Initialization
+
+        $$->addChild($5);   // Condition
+
+        $$->addChild($7);   // Update
+
+        $$->addChild($9);   // Body
+    }
     ;
 
 %%
