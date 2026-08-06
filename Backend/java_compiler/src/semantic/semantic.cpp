@@ -17,6 +17,14 @@ void processVariableDeclaration(ASTNode *node)
          << " "
          << name
          << endl;
+
+    if(!symbolTable.insert(name, type))
+    {
+        cout << "Semantic Error : Variable "
+             << name
+             << " already declared."
+             << endl;
+    }
 }
 
 void traverseAST(ASTNode *node)
@@ -52,6 +60,7 @@ void semanticCheck(ASTNode *root)
         cout << "AST is empty." << endl;
         return;
     }
+    symbolTable.clear();
 
     cout << "Semantic Analysis Started..." << endl;
     cout << endl;
@@ -60,4 +69,5 @@ void semanticCheck(ASTNode *root)
 
     cout << endl;
     cout << "Semantic Analysis Completed." << endl;
+   
 }

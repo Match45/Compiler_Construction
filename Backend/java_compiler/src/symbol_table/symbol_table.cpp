@@ -39,3 +39,7 @@ void SymbolTable::print()
              << endl;
     }
 }
+void SymbolTable::clear()
+{
+    table.clear();
+}

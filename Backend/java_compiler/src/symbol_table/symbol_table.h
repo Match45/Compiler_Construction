@@ -21,6 +21,9 @@ public:
     string getType(string name);
 
     void print();
+    void clear();
+    
+
 };
 
 extern SymbolTable symbolTable;

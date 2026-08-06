@@ -296,13 +296,6 @@ return_statement
 variable_declaration
     : data_type IDENTIFIER ';'
     {
-        if(!symbolTable.insert($2, $1->value))
-        {
-            cout << "Semantic Error: Variable "
-                 << $2
-                 << " already declared." << endl;
-        }
-
         $$ = new ASTNode("VariableDeclaration");
 
         $$->addChild($1);
@@ -312,13 +305,6 @@ variable_declaration
 
     | data_type IDENTIFIER '=' expression ';'
     {
-        if(!symbolTable.insert($2, $1->value))
-        {
-            cout << "Semantic Error: Variable "
-                 << $2
-                 << " already declared." << endl;
-        }
-
         $$ = new ASTNode("VariableDeclaration");
 
         $$->addChild($1);
@@ -365,12 +351,6 @@ data_type
 assignment_statement
     : IDENTIFIER '=' expression ';'
     {
-        if(!symbolTable.exists($1))
-        {
-            cout << "Semantic Error: Variable "
-                 << $1
-                 << " not declared." << endl;
-        }
 
         $$ = new ASTNode("Assignment");
 
@@ -378,17 +358,11 @@ assignment_statement
 
         $$->addChild($3);
     }
-    
+    ;
 
 assignment_expression
     : IDENTIFIER '=' expression
     {
-        if(!symbolTable.exists($1))
-        {
-            cout << "Semantic Error: Variable "
-                 << $1
-                 << " not declared." << endl;
-        }
 
         $$ = new ASTNode("Assignment");
 
@@ -396,7 +370,7 @@ assignment_expression
 
         $$->addChild($3);
     }
-    
+    ;
 
 print_statement
     : PRINTLN '(' expression ')' ';'
