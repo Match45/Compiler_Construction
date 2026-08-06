@@ -382,11 +382,11 @@ int main()
     printTokenTable();
 
     // Print Phase 2
-    cout << "\n=======================================================\n";
+    cout << "\n...............\n";
     cout << "           PHASE 2: SYNTAX ANALYSIS (AST)              \n";
-    cout << "=======================================================\n";
+    cout << "...............\n";
     printAST(root);
-    cout << "=======================================================\n";
+    cout << "...............\n";
 
     // Print Phase 3
     semanticCheck(root);
@@ -406,7 +406,7 @@ int main()
     printExecutionOutput();
 
     // Output JSON block for Node.js API consumer
-    cout << "\n===JSON_START===\n{";
+    cout << "\n___JSON_START___\n{";
     
     // Tokens JSON
     cout << "\"tokens\":[";
@@ -468,7 +468,7 @@ int main()
         if (i + 1 < executionOutput.size()) cout << ",";
     }
     cout << "]\n";
-    cout << "}\n===JSON_END===\n";
+    cout << "}\n___JSON_END___\n";
 
     return 0;
 }
