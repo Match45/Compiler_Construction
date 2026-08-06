@@ -9,21 +9,35 @@ void processVariableDeclaration(ASTNode *node)
     if(node->children.size() < 2)
         return;
 
-    string type = node->children[0]->value;
-    string name = node->children[1]->value;
+    string type=node->children[0]->value;
+    string name=node->children[1]->value;
 
-    cout << "Variable Declaration Found : "
-         << type
-         << " "
-         << name
-         << endl;
+    cout<<"Variable Declaration Found : "
+        <<type<<" "
+        <<name<<endl;
 
-    if(!symbolTable.insert(name, type))
+    if(!symbolTable.insert(name,type))
     {
-        cout << "Semantic Error : Variable "
-             << name
-             << " already declared."
-             << endl;
+        cout<<"Semantic Error : Variable "
+            <<name
+            <<" already declared."
+            <<endl;
+
+        return;
+    }
+
+    if(node->children.size()==3)
+    {
+        string exprType=getExpressionType(node->children[2]);
+
+        if(type!=exprType)
+        {
+            cout<<"Semantic Error : Cannot assign "
+                <<exprType
+                <<" to "
+                <<type
+                <<endl;
+        }
     }
 }
 
@@ -75,6 +89,48 @@ void traverseAST(ASTNode *node)
     }
 }
 
+string getExpressionType(ASTNode *node)
+{
+    if(node == nullptr)
+        return "";
+
+    if(node->type == "Integer")
+        return "int";
+
+    if(node->type == "Float")
+        return "float";
+
+    if(node->type == "Boolean")
+        return "boolean";
+
+    if(node->type == "Char")
+        return "char";
+
+    if(node->type == "String")
+        return "String";
+
+    if(node->type == "Identifier")
+    {
+        return symbolTable.getType(node->value);
+    }
+
+    if(node->type=="+" ||
+       node->type=="-" ||
+       node->type=="*" ||
+       node->type=="/" ||
+       node->type=="%")
+    {
+        string left=getExpressionType(node->children[0]);
+        string right=getExpressionType(node->children[1]);
+
+        if(left=="float" || right=="float")
+            return "float";
+
+        return "int";
+    }
+
+    return "";
+}
 void semanticCheck(ASTNode *root)
 {
     cout << endl;
