@@ -1,0 +1,5 @@
+src/Lexical/lex.yy.c
+src/Parser/parser.tab.c
+src/Parser/parser.tab.h
+cpp_compiler
+cpp_compiler.exe
