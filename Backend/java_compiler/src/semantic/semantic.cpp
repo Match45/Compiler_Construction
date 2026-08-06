@@ -1,7 +1,23 @@
 #include <iostream>
 #include "semantic.h"
+#include "../symbol_table/symbol_table.h"
 
 using namespace std;
+
+void processVariableDeclaration(ASTNode *node)
+{
+    if(node->children.size() < 2)
+        return;
+
+    string type = node->children[0]->value;
+    string name = node->children[1]->value;
+
+    cout << "Variable Declaration Found : "
+         << type
+         << " "
+         << name
+         << endl;
+}
 
 void traverseAST(ASTNode *node)
 {
@@ -14,6 +30,11 @@ void traverseAST(ASTNode *node)
         cout << " (" << node->value << ")";
 
     cout << endl;
+
+    if(node->type == "VariableDeclaration")
+    {
+    processVariableDeclaration(node);
+    }
 
     for(ASTNode *child : node->children)
     {

@@ -7,4 +7,6 @@ void semanticCheck(ASTNode *root);
 
 void traverseAST(ASTNode *node);
 
+void processVariableDeclaration(ASTNode *node);
+
 #endif
