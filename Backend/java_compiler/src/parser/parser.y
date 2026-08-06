@@ -1,6 +1,7 @@
 %code requires {
     #include "../ast/ast.h"
     #include "../symbol_table/symbol_table.h"
+    #include "../semantic/semantic.h"
 }
 
 %{
@@ -11,6 +12,7 @@
 
 #include "../ast/ast.h"
 #include "../symbol_table/symbol_table.h"
+#include "../semantic/semantic.h"
 
 using namespace std;
 
@@ -141,6 +143,8 @@ program
         cout << ".......... AST .........." << endl;
 
         printAST(root);
+
+        semanticCheck(root);
 
         symbolTable.print();
         
