@@ -29,7 +29,7 @@ string SymbolTable::getType(string name)
 
 void SymbolTable::print()
 {
-    cout << "\n===== SYMBOL TABLE =====\n";
+    cout << "\n          SYMBOL TABLE           \n";
 
     for(auto item : table)
     {

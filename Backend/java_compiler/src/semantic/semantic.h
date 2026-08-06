@@ -5,4 +5,6 @@
 
 void semanticCheck(ASTNode *root);
 
+void traverseAST(ASTNode *node);
+
 #endif
