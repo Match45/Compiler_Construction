@@ -1,5 +1,6 @@
 %code requires {
     #include "../ast/ast.h"
+    #include "../symbol_table/symbol_table.h"
 }
 
 %{
@@ -9,6 +10,7 @@
 #include <cstring>
 
 #include "../ast/ast.h"
+#include "../symbol_table/symbol_table.h"
 
 using namespace std;
 
@@ -139,6 +141,9 @@ program
         cout << ".......... AST .........." << endl;
 
         printAST(root);
+
+        symbolTable.print();
+        
     }
     ;
 
@@ -287,6 +292,13 @@ return_statement
 variable_declaration
     : data_type IDENTIFIER ';'
     {
+        if(!symbolTable.insert($2, $1->value))
+        {
+            cout << "Semantic Error: Variable "
+                 << $2
+                 << " already declared." << endl;
+        }
+
         $$ = new ASTNode("VariableDeclaration");
 
         $$->addChild($1);
@@ -296,6 +308,13 @@ variable_declaration
 
     | data_type IDENTIFIER '=' expression ';'
     {
+        if(!symbolTable.insert($2, $1->value))
+        {
+            cout << "Semantic Error: Variable "
+                 << $2
+                 << " already declared." << endl;
+        }
+
         $$ = new ASTNode("VariableDeclaration");
 
         $$->addChild($1);
@@ -305,6 +324,7 @@ variable_declaration
         $$->addChild($4);
     }
     ;
+    
 
 data_type
     : INT
@@ -341,24 +361,38 @@ data_type
 assignment_statement
     : IDENTIFIER '=' expression ';'
     {
+        if(!symbolTable.exists($1))
+        {
+            cout << "Semantic Error: Variable "
+                 << $1
+                 << " not declared." << endl;
+        }
+
         $$ = new ASTNode("Assignment");
 
         $$->addChild(new ASTNode("Identifier", $1));
 
         $$->addChild($3);
     }
-    ;
+    
 
 assignment_expression
     : IDENTIFIER '=' expression
     {
+        if(!symbolTable.exists($1))
+        {
+            cout << "Semantic Error: Variable "
+                 << $1
+                 << " not declared." << endl;
+        }
+
         $$ = new ASTNode("Assignment");
 
         $$->addChild(new ASTNode("Identifier", $1));
 
         $$->addChild($3);
     }
-    ;
+    
 
 print_statement
     : PRINTLN '(' expression ')' ';'
