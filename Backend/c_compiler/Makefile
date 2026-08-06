@@ -15,7 +15,9 @@ $(BUILD)/lex.yy.cpp: src/lexer/lexer.l $(BUILD)/parser.tab.h | $(BUILD)
 
 $(BUILD)/c_compiler: $(BUILD)/parser.tab.cpp $(BUILD)/lex.yy.cpp \
                       src/ast/ast.cpp src/symbol_table/symbol_table.cpp \
-                      src/semantic/semantic.cpp src/icg/icg.cpp src/main.cpp
+                      src/semantic/semantic.cpp src/icg/icg.cpp \
+                      src/optimizer/optimizer.cpp src/codegen/codegen.cpp \
+                      src/main.cpp
 	$(CXX) $(CXXFLAGS) -I$(BUILD) -o $@ $^
 
 clean:
