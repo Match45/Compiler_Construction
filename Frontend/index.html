@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeArena - Online Compiler for C, C++ & Java</title>
+    <meta name="description" content="CodeArena is a modern, high-performance online compiler supporting C, C++, and Java with statement-level snippet execution and 6 compiler phases visualization.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body class="dark-theme">
+    <!-- Background Glow Effects -->
+    <div class="glow-bg glow-top-left"></div>
+    <div class="glow-bg glow-top-right"></div>
+
+    <div class="app-container">
+        <!-- Main Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="window-controls">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                </div>
+                <div class="brand">
+                    <div class="brand-logo">CA</div>
+                    <div class="brand-text">
+                        <span class="brand-name">CodeArena</span>
+                        <span class="brand-subtitle">ONLINE COMPILER</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <!-- Utility Toolbar -->
+                <div class="utility-toolbar">
+                    <button class="tool-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <button class="tool-btn" id="copyBtn" title="Copy Code">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                    <button class="tool-btn" id="clearBtn" title="Clear Code & Input">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+                    <button class="tool-btn" id="downloadBtn" title="Download Code File">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                    <button class="tool-btn" id="resetBtn" title="Reset Workspace">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+
+                <!-- Language Selector Dropdown -->
+                <div class="language-selector-wrapper">
+                    <i class="fa-solid fa-code lang-icon"></i>
+                    <select id="languageSelect" class="language-dropdown">
+                        <option value="c">C</option>
+                        <option value="cpp" selected>C++</option>
+                        <option value="java">Java</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                </div>
+
+                <!-- Run Code Button -->
+                <button id="runBtn" class="run-button">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Run</span>
+                    <small class="shortcut-badge">Ctrl+Enter</small>
+                </button>
+            </div>
+        </header>
+
+        <!-- Breadcrumb Navigation Bar -->
+        <div class="breadcrumb-bar">
+            <div class="breadcrumbs">
+                <span class="crumb-root">CodeArena</span>
+                <span class="crumb-sep">/</span>
+                <span class="crumb-folder">workspace</span>
+                <span class="crumb-sep">/</span>
+                <span id="activeFileName" class="crumb-file">main.cpp</span>
+            </div>
+            <div class="snippet-mode-toggle">
+                <span class="toggle-label">Snippet Mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="snippetModeCheckbox" checked>
+                    <span class="slider round"></span>
+                </label>
+                <span class="info-tooltip" title="Auto-wraps snippet functions or statements">
+                    <i class="fa-solid fa-circle-info"></i>
+                </span>
+            </div>
+        </div>
+
+        <!-- Main Workspace Area -->
+        <main class="workspace">
+            <!-- Left Side: Code Editor -->
+            <section class="editor-section">
+                <div class="section-header">
+                    <div class="active-tab-badge">
+                        <span class="tab-dot"></span>
+                        <span id="editorTabName">main.cpp</span>
+                    </div>
+                    <span class="editor-hint">Supports full programs & single statements</span>
+                </div>
+                <div class="editor-wrapper">
+                    <div class="line-numbers" id="lineNumbers">1</div>
+                    <div class="editor-area">
+                        <textarea id="codeEditor" spellcheck="false" placeholder="Write your code here..."></textarea>
+                        <pre id="highlighting" aria-hidden="true"><code id="highlightingContent"></code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Side: Input & Output Panels -->
+            <section class="console-section">
+                <!-- Top Right: Input Panel (STDIN) -->
+                <div class="input-panel" id="inputPanel">
+                    <div class="panel-header">
+                        <span class="panel-title"><i class="fa-solid fa-terminal"></i> INPUT &bull; STDIN</span>
+                        <button id="sendInputBtn" class="send-input-badge"><i class="fa-solid fa-paper-plane"></i> Submit Input</button>
+                    </div>
+                    <textarea id="stdinInput" placeholder="Click 'Run' first, then write input here (e.g. 50 30)..."></textarea>
+                </div>
+
+                <!-- Bottom Right: Output & Compiler Phases Panel -->
+                <div class="output-panel">
+                    <div class="output-tabs-header">
+                        <div class="tab-buttons">
+                            <button id="tabOutputBtn" class="tab-btn active"><i class="fa-solid fa-square-poll-vertical"></i> OUTPUT</button>
+                            <button id="tabPhasesBtn" class="tab-btn"><i class="fa-solid fa-diagram-project"></i> COMPILER PHASES</button>
+                        </div>
+                        <div id="statusPill" class="status-pill status-ready">
+                            <span class="pill-dot"></span>
+                            <span id="statusText">Ready</span>
+                        </div>
+                    </div>
+
+                    <!-- Output Tab View -->
+                    <div id="outputTabView" class="tab-view active">
+                        <div class="terminal-box">
+                            <div class="cmd-line" id="commandLine">$ run (cpp)</div>
+                            <pre class="stdout-box" id="stdoutOutput">Press "Run" to compile and execute your code.</pre>
+                            <div class="exit-line" id="exitLine">$ process exited with code 0</div>
+                        </div>
+                        <div class="output-footer">
+                            <span id="executionTime" class="exec-time"><i class="fa-regular fa-clock"></i> Execution: 0ms</span>
+                        </div>
+                    </div>
+
+                    <!-- Compiler Phases Tab View (6 Compiler Phases) -->
+                    <div id="phasesTabView" class="tab-view">
+                        <div class="phases-container">
+                            <!-- All 6 Phase Navigator Pills -->
+                            <div class="phase-pills">
+                                <button class="phase-pill active" data-phase="tokens">1. Lexer (Tokens)</button>
+                                <button class="phase-pill" data-phase="ast">2. Parser (AST)</button>
+                                <button class="phase-pill" data-phase="symbols">3. Semantic Analysis</button>
+                                <button class="phase-pill" data-phase="icg">4. ICG (Three-Address Code)</button>
+                                <button class="phase-pill" data-phase="optimizer">5. Code Optimizer</button>
+                                <button class="phase-pill" data-phase="target">6. Target Code Gen</button>
+                            </div>
+
+                            <!-- Phase Content Box -->
+                            <div class="phase-content-wrapper">
+                                <!-- Phase 1: Lexical Analysis -->
+                                <div id="phaseTokens" class="phase-detail-view active">
+                                    <h4>Phase 1: Lexical Analysis (Tokens Stream)</h4>
+                                    <div class="table-responsive">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Line</th>
+                                                    <th>Token Value</th>
+                                                    <th>Token Type</th>
+                                                    <th>Col</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tokensTableBody">
+                                                <tr><td colspan="4" class="empty-msg">Run code to inspect Lexer tokens</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Phase 2: Syntax Analysis -->
+                                <div id="phaseAst" class="phase-detail-view">
+                                    <h4>Phase 2: Syntax Analysis (Abstract Syntax Tree / AST)</h4>
+                                    <pre id="astTreeDisplay" class="tree-display">Run code to generate Abstract Syntax Tree (AST)</pre>
+                                </div>
+
+                                <!-- Phase 3: Semantic Analysis -->
+                                <div id="phaseSymbols" class="phase-detail-view">
+                                    <h4>Phase 3: Semantic Analysis (Symbol Table & Type Checking)</h4>
+                                    <div class="table-responsive">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Identifier Name</th>
+                                                    <th>Data Type</th>
+                                                    <th>Scope</th>
+                                                    <th>Line</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="symbolsTableBody">
+                                                <tr><td colspan="5" class="empty-msg">Run code to view Symbol Table and Semantic Type Checks</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Phase 4: Intermediate Code Generation -->
+                                <div id="phaseIcg" class="phase-detail-view">
+                                    <h4>Phase 4: Intermediate Code Generation (ICG / Three-Address Code)</h4>
+                                    <pre id="icgDisplay" class="code-display">Run code to generate TAC IR instructions</pre>
+                                </div>
+
+                                <!-- Phase 5: Code Optimizer -->
+                                <div id="phaseOptimizer" class="phase-detail-view">
+                                    <h4>Phase 5: Code Optimizer (Constant Folding & Dead Code Removal)</h4>
+                                    <pre id="optimizerDisplay" class="code-display">Run code to inspect Optimized Intermediate Code</pre>
+                                </div>
+
+                                <!-- Phase 6: Target Code Generator -->
+                                <div id="phaseTarget" class="phase-detail-view">
+                                    <h4>Phase 6: Target Code Generator (x86_64 Assembly / JVM Bytecode)</h4>
+                                    <pre id="targetDisplay" class="code-display">Run code to generate Target Assembly / Machine Code</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Application JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
