@@ -12,7 +12,6 @@ bool SymbolTable::insert(string name, string type)
     table[name] = type;
     return true;
 }
-
 bool SymbolTable::exists(string name)
 {
     return table.find(name) != table.end();
@@ -25,7 +24,6 @@ string SymbolTable::getType(string name)
 
     return "";
 }
-
 void SymbolTable::print()
 {
     cout << "\n          SYMBOL TABLE           \n";
