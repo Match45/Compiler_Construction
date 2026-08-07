@@ -6,9 +6,7 @@
 #include "../ast/ast.h"
 
 using namespace std;
-
 extern vector<string> semanticLogs;
-
 void semanticCheck(ASTNode *root);
 void traverseAST(ASTNode *node);
 void processAssignment(ASTNode *node);
