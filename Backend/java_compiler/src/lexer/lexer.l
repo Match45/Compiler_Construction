@@ -2,16 +2,23 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include "tokens.h"
+#include "../parser/parser.tab.h"
 
 using namespace std;
 
-#include "../parser/parser.tab.h"
-
 extern int yylineno;
+
+static char* copyString(const char* s) {
+    char* d = (char*)malloc(strlen(s) + 1);
+    if (d) strcpy(d, s);
+    return d;
+}
 %}
 
 %option noyywrap
 %option yylineno
+%option never-interactive
 
 LETTER      [a-zA-Z_]
 DIGIT       [0-9]
@@ -25,112 +32,109 @@ CHAR_PATTERN    \'([^\\\']|\\.)\'
 
 %%
 
-"public"                  { return PUBLIC; }
-"private"                 { return PRIVATE; }
-"protected"               { return PROTECTED; }
+"public"                  { addToken("KEYWORD", yytext, yylineno); return PUBLIC; }
+"private"                 { addToken("KEYWORD", yytext, yylineno); return PRIVATE; }
+"protected"               { addToken("KEYWORD", yytext, yylineno); return PROTECTED; }
 
-"class"                   { return CLASS; }
+"class"                   { addToken("KEYWORD", yytext, yylineno); return CLASS; }
+"static"                  { addToken("KEYWORD", yytext, yylineno); return STATIC; }
+"void"                    { addToken("KEYWORD", yytext, yylineno); return VOID; }
+"main"                    { addToken("KEYWORD", yytext, yylineno); return MAIN; }
 
-"static"                  { return STATIC; }
+"int"                     { addToken("DATA_TYPE", yytext, yylineno); return INT; }
+"float"                   { addToken("DATA_TYPE", yytext, yylineno); return FLOAT; }
+"double"                  { addToken("DATA_TYPE", yytext, yylineno); return DOUBLE; }
+"char"                    { addToken("DATA_TYPE", yytext, yylineno); return CHAR; }
+"boolean"                 { addToken("DATA_TYPE", yytext, yylineno); return BOOLEAN; }
+"String"                  { addToken("DATA_TYPE", yytext, yylineno); return STRING; }
 
-"void"                    { return VOID; }
+"if"                      { addToken("KEYWORD", yytext, yylineno); return IF; }
+"else"                    { addToken("KEYWORD", yytext, yylineno); return ELSE; }
+"for"                     { addToken("KEYWORD", yytext, yylineno); return FOR; }
+"while"                   { addToken("KEYWORD", yytext, yylineno); return WHILE; }
+"do"                      { addToken("KEYWORD", yytext, yylineno); return DO; }
+"return"                  { addToken("KEYWORD", yytext, yylineno); return RETURN; }
 
-"main"                    { return MAIN; }
+"true"                    { addToken("BOOLEAN_LITERAL", yytext, yylineno); return TRUE; }
+"false"                   { addToken("BOOLEAN_LITERAL", yytext, yylineno); return FALSE; }
 
-"int"                     { return INT; }
-"float"                   { return FLOAT; }
-"double"                  { return DOUBLE; }
-"char"                    { return CHAR; }
-"boolean"                 { return BOOLEAN; }
-"String"                  { return STRING; }
+"System.out.println"      { addToken("PRINT_STMT", yytext, yylineno); return PRINTLN; }
+"System.out.print"        { addToken("PRINT_STMT", yytext, yylineno); return PRINT; }
 
-"if"                      { return IF; }
-"else"                    { return ELSE; }
+"=="                      { addToken("OPERATOR", yytext, yylineno); return EQ; }
+"!="                      { addToken("OPERATOR", yytext, yylineno); return NEQ; }
+"<="                      { addToken("OPERATOR", yytext, yylineno); return LE; }
+">="                      { addToken("OPERATOR", yytext, yylineno); return GE; }
 
-"for"                     { return FOR; }
-"while"                   { return WHILE; }
-"do"                      { return DO; }
+"&&"                      { addToken("OPERATOR", yytext, yylineno); return AND; }
+"||"                      { addToken("OPERATOR", yytext, yylineno); return OR; }
 
-"return"                  { return RETURN; }
+"++"                      { addToken("OPERATOR", yytext, yylineno); return INC; }
+"--"                      { addToken("OPERATOR", yytext, yylineno); return DEC; }
 
-"true"                    { return TRUE; }
-"false"                   { return FALSE; }
+"+"                       { addToken("OPERATOR", yytext, yylineno); return '+'; }
+"-"                       { addToken("OPERATOR", yytext, yylineno); return '-'; }
+"*"                       { addToken("OPERATOR", yytext, yylineno); return '*'; }
+"/"                       { addToken("OPERATOR", yytext, yylineno); return '/'; }
+"%"                       { addToken("OPERATOR", yytext, yylineno); return '%'; }
 
-"System.out.println"      { return PRINTLN; }
+"="                       { addToken("OPERATOR", yytext, yylineno); return '='; }
 
-"=="                      { return EQ; }
-"!="                      { return NEQ; }
-"<="                      { return LE; }
-">="                      { return GE; }
+"<"                       { addToken("OPERATOR", yytext, yylineno); return '<'; }
+">"                       { addToken("OPERATOR", yytext, yylineno); return '>'; }
 
-"&&"                      { return AND; }
-"||"                      { return OR; }
+"!"                       { addToken("OPERATOR", yytext, yylineno); return '!'; }
 
-"++"                      { return INC; }
-"--"                      { return DEC; }
+";"                       { addToken("DELIMITER", yytext, yylineno); return ';'; }
+","                       { addToken("DELIMITER", yytext, yylineno); return ','; }
 
-"+"                       { return '+'; }
-"-"                       { return '-'; }
-"*"                       { return '*'; }
-"/"                       { return '/'; }
-"%"                       { return '%'; }
+"("                       { addToken("DELIMITER", yytext, yylineno); return '('; }
+")"                       { addToken("DELIMITER", yytext, yylineno); return ')'; }
 
-"="                       { return '='; }
+"{"                       { addToken("DELIMITER", yytext, yylineno); return '{'; }
+"}"                       { addToken("DELIMITER", yytext, yylineno); return '}'; }
 
-"<"                       { return '<'; }
-">"                       { return '>'; }
-
-"!"                       { return '!'; }
-
-";"                       { return ';'; }
-","                       { return ','; }
-
-"("                       { return '('; }
-")"                       { return ')'; }
-
-"{"                       { return '{'; }
-"}"                       { return '}'; }
-
-"["                       { return '['; }
-"]"                       { return ']'; }
+"["                       { addToken("DELIMITER", yytext, yylineno); return '['; }
+"]"                       { addToken("DELIMITER", yytext, yylineno); return ']'; }
 
 {FLOATNUM} {
+    addToken("FLOAT_LITERAL", yytext, yylineno);
     yylval.fval = atof(yytext);
     return FLOAT_LITERAL;
 }
 
 {INTEGERNUM} {
+    addToken("INTEGER_LITERAL", yytext, yylineno);
     yylval.ival = atoi(yytext);
     return INTEGER_LITERAL;
 }
 
 {STRING_PATTERN} {
-    yylval.sval = strdup(yytext);
+    addToken("STRING_LITERAL", yytext, yylineno);
+    yylval.sval = copyString(yytext);
     return STRING_LITERAL;
 }
 
 {CHAR_PATTERN} {
-    yylval.sval = strdup(yytext);
+    addToken("CHAR_LITERAL", yytext, yylineno);
+    yylval.sval = copyString(yytext);
     return CHAR_LITERAL;
 }
 
 {ID} {
-    yylval.sval = strdup(yytext);
+    addToken("IDENTIFIER", yytext, yylineno);
+    yylval.sval = copyString(yytext);
     return IDENTIFIER;
 }
 
-"//".*      { }
+"//".*                    { /* ignore inline comments */ }
+"/*"([^*]|\*+[^/*])*\*+"/" { /* ignore block comments */ }
 
-[ \t\r]+    { }
-
-\n          { }
+[ \t\r]+                  { }
+\n                        { }
 
 . {
-    cout << "Lexical Error at line "
-         << yylineno
-         << " : "
-         << yytext
-         << endl;
+    cout << "Lexical Error at line " << yylineno << " : " << yytext << endl;
 }
 
 %%

@@ -13,19 +13,19 @@ void ASTNode::addChild(ASTNode* node)
 
 void printAST(ASTNode* node, int level)
 {
-    if(node == nullptr)
+    if (node == nullptr)
         return;
 
-    for(int i = 0; i < level; i++)
+    for (int i = 0; i < level; i++)
         cout << "   ";
 
     cout << node->type;
 
-    if(node->value != "")
+    if (node->value != "")
         cout << " : " << node->value;
 
     cout << endl;
 
-    for(auto child : node->children)
+    for (auto child : node->children)
         printAST(child, level + 1);
 }

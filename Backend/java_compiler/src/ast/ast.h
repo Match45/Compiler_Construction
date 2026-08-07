@@ -10,14 +10,11 @@ using namespace std;
 class ASTNode
 {
 public:
-
     string type;
     string value;
-
     vector<ASTNode*> children;
 
     ASTNode(string t, string v = "");
-
     void addChild(ASTNode* node);
 };
 
