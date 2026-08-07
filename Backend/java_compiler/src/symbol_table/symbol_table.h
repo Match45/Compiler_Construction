@@ -13,17 +13,12 @@ private:
     map<string, string> table;
 
 public:
-
     bool insert(string name, string type);
-
     bool exists(string name);
-
     string getType(string name);
-
     void print();
     void clear();
-    
-
+    const map<string, string>& getTable() const { return table; }
 };
 
 extern SymbolTable symbolTable;
