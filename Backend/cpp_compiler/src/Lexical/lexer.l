@@ -8,7 +8,7 @@
 #include <string>
 
 #include "../Parser/ast.h"
-#include "../Parser/parser.tab.h"
+#include "parser.tab.h"
 
 inline char* my_strdup(const char* s) {
     if (!s) return nullptr;
