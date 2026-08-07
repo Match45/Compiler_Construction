@@ -28,4 +28,4 @@ $(TARGET): $(BUILD_DIR)/parser.tab.c $(BUILD_DIR)/lex.yy.c
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS)
 
 clean:
-	rm -rf $(BUILD)
+	rm -f $(BUILD_DIR)/parser.tab.c $(BUILD_DIR)/parser.tab.h $(BUILD_DIR)/lex.yy.c $(TARGET) $(TARGET).exe
